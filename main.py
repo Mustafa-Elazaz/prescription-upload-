@@ -7,21 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
 
-from app.preprocessing import preprocess_image
-
-from app.segmentation import segment_medicines
-
-from app.ocr import (
-    extract_text,
-    extract_text_from_crop
-)
-
+from app.ocr import extract_text
 from app.validator import (
     validate_medicine,
     validate_medicine_list
 )
-
-from app.filter import is_medicine
 
 app = FastAPI(
     title="Prescription OCR API"
@@ -29,16 +19,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-
     allow_origins=["*"],
-
     allow_credentials=True,
-
     allow_methods=["*"],
-
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
-
 
 UPLOAD_FOLDER = "app/uploads"
 
@@ -49,7 +34,6 @@ os.makedirs(
 
 
 @app.get("/health")
-
 def health():
 
     return {
@@ -58,7 +42,6 @@ def health():
 
 
 @app.post("/predict")
-
 async def predict(
     file: UploadFile = File(...)
 ):
@@ -78,78 +61,62 @@ async def predict(
             buffer
         )
 
-    # ---------------------------------
-    # PREPROCESS
-    # ---------------------------------
+    # -----------------------------
+    # OCR
+    # -----------------------------
 
-    original, thresh = preprocess_image(
+    ocr_text = extract_text(
         file_path
     )
 
-    # ---------------------------------
-    # SEGMENT
-    # ---------------------------------
+    print("=" * 50)
+    print("OCR OUTPUT:")
+    print(ocr_text)
+    print("=" * 50)
 
-    crops = segment_medicines(
-        original,
-        thresh
-    )
+    # -----------------------------
+    # Split OCR output
+    # -----------------------------
 
-    # ---------------------------------
-    # OCR EACH CROP
-    # ---------------------------------
+    candidates = []
 
-    ocr_results = []
+    for line in ocr_text.split("\n"):
 
-    for crop in crops:
+        line = line.strip()
 
-        text = extract_text_from_crop(
-            crop
-        )
+        if len(line) > 2:
 
-        if is_medicine(text):
-
-            ocr_results.append(
-                text
+            candidates.append(
+                line
             )
 
-    # ---------------------------------
-    # FALLBACK
-    # ---------------------------------
+    # If OCR returned one line only
 
-    if len(ocr_results) == 0:
+    if len(candidates) == 0:
 
-        text = extract_text(
-            file_path
+        candidates.append(
+            ocr_text
         )
 
-        ocr_results.append(
-            text
-        )
+    # -----------------------------
+    # Validation
+    # -----------------------------
 
-    # ---------------------------------
-    # VALIDATION
-    # ---------------------------------
-    if len(ocr_results == 1):
-        
-        medicines = validate_medicine(
-        ocr_results
-        )
-    else:
-        medicines = validate_medicine_list(
-            ocr_results
-        )
+    medicines = validate_medicine_list(
+        candidates
+    )
 
     return {
 
         "success": True,
 
-        "detected_text":
+        "ocr_text":
+        ocr_text,
 
-        ocr_results,
+        "detected_text":
+        candidates,
 
         "medicines":
-
         medicines
 
     }
