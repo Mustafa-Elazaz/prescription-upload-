@@ -171,25 +171,16 @@ def validate_medicine_list(ocr_results):
 
         result = validate_medicine(text)
 
-        if result is not None:
+        if result:
 
-            key = result["Drugname"]
+            if result["Drugname"] not in seen:
 
-            if key not in seen:
+                seen.add(
+                    result["Drugname"]
+                )
 
-                seen.add(key)
-
-                medicines.append({
-
-                    "Drugname":
-                    result["Drugname"],
-
-                    "Form":
-                    result["Form"],
-
-                    "Category":
-                    result["Category"]
-
-                })
+                medicines.append(
+                    result
+                )
 
     return medicines
