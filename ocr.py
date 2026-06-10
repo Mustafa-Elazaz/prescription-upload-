@@ -36,7 +36,7 @@ def extract_text(image_path):
     outputs = model.generate(
         **inputs,
         max_length=30,
-        num_beams=4,
+        num_beams=2,
         early_stopping=True
     )
 
@@ -67,7 +67,7 @@ def extract_text_from_crop(crop):
     outputs = model.generate(
         **inputs,
         max_length=20,
-        num_beams=5,
+        num_beams=2,
         early_stopping=True,
         no_repeat_ngram_size=2
     )
